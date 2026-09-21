@@ -1,0 +1,249 @@
+diff --git a/include/rex/input/mnk/mnk_input_driver.h b/include/rex/input/mnk/mnk_input_driver.h
+index c8751b7..ec3bd2d 100644
+--- a/include/rex/input/mnk/mnk_input_driver.h
++++ b/include/rex/input/mnk/mnk_input_driver.h
+@@ -81,6 +81,16 @@ class MnkInputDriver final : public InputDriver,
+   // Filled on the UI thread, drained on the guest thread, hence the lock.
+   float mouse_dx_ = 0.0f;
+   float mouse_dy_ = 0.0f;
++  // Sub-deadzone remainder so slow aim still turns without snapping every
++  // noisy pixel onto a huge stick value.
++  double look_carry_x_ = 0.0;
++  double look_carry_y_ = 0.0;
++  // Repeat the last stick sample for a couple of extra GetState polls. The
++  // guest reads XInput several times per frame; zeroing after the first poll
++  // made look stutter. A long wall-clock hold made it shake.
++  int32_t held_look_x_ = 0;
++  int32_t held_look_y_ = 0;
++  int look_hold_polls_ = 0;
+ 
+   // UI thread only.
+   int32_t prev_mouse_x_ = 0;
+diff --git a/include/rex/ui/window.h b/include/rex/ui/window.h
+index f607be2..39db1f7 100644
+--- a/include/rex/ui/window.h
++++ b/include/rex/ui/window.h
+@@ -308,6 +308,9 @@ class Window {
+     (void)enable;
+     return false;
+   }
++  virtual bool IsRelativeMouseMode() const { return false; }
++  // Bit 0 left, bit 1 right, bit 2 middle. Safe to call from any thread.
++  virtual uint32_t QueryMouseButtons() const { return 0; }
+   // Fallback when relative mode isn't available. Returns false, leaving the
+   // outputs untouched, unless the pointer verifiably reached the center.
+   virtual bool WarpMouseToCenter(int32_t& x_out, int32_t& y_out) {
+diff --git a/include/rex/ui/window_sdl.h b/include/rex/ui/window_sdl.h
+index 71e7473..e749a1d 100644
+--- a/include/rex/ui/window_sdl.h
++++ b/include/rex/ui/window_sdl.h
+@@ -33,6 +33,8 @@ class WindowSDL final : public Window {
+ 
+   void* GetNativeWindowHandle() const override;
+   bool SetRelativeMouseMode(bool enable) override;
++  bool IsRelativeMouseMode() const override;
++  uint32_t QueryMouseButtons() const override;
+   bool WarpMouseToCenter(int32_t& x_out, int32_t& y_out) override;
+ 
+   // Called by SDLWindowedAppContext on the UI thread.
+diff --git a/src/input/mnk/mnk_input_driver.cpp b/src/input/mnk/mnk_input_driver.cpp
+index 3f9422d..7cf1110 100644
+--- a/src/input/mnk/mnk_input_driver.cpp
++++ b/src/input/mnk/mnk_input_driver.cpp
+@@ -124,15 +124,21 @@ std::string_view TrimSpaces(std::string_view s) {
+ 
+ bool TokenPressed(const bool (&key_down)[256], std::string_view token, uint8_t live_mods) {
+   uint8_t want = TakeModifiers(token);
+-  if (want != live_mods) {
+-    return false;
+-  }
+   rex::ui::VirtualKey vk = rex::ui::ParseVirtualKey(token);
+   if (vk == rex::ui::VirtualKey::kNone) {
+     return false;
+   }
+   uint16_t idx = static_cast<uint16_t>(vk);
+-  return idx < 256 && key_down[idx];
++  if (idx >= 256 || !key_down[idx]) {
++    return false;
++  }
++  // Mouse buttons must fire while WASD/Shift/Ctrl are held. Exact modifier
++  // matching is only for keyboard chords like Shift+Up.
++  if (vk == rex::ui::VirtualKey::kLButton || vk == rex::ui::VirtualKey::kRButton ||
++      vk == rex::ui::VirtualKey::kMButton) {
++    return true;
++  }
++  return want == live_mods;
+ }
+ 
+ std::atomic<bool> mouse_look_active{true};
+@@ -274,6 +280,15 @@ X_RESULT MnkInputDriver::GetDeviceState(DeviceId id, X_INPUT_STATE* out_state) {
+ 
+   std::lock_guard lock(state_mutex_);
+ 
++  // SDL relative mode can drop button events. Sample the live buttons so
++  // left/right click still map even when OnMouseDown never ran.
++  if (attached_window_) {
++    uint32_t mouse_buttons = attached_window_->QueryMouseButtons();
++    SetKeyState(static_cast<uint16_t>(VirtualKey::kLButton), (mouse_buttons & 1u) != 0);
++    SetKeyState(static_cast<uint16_t>(VirtualKey::kRButton), (mouse_buttons & 2u) != 0);
++    SetKeyState(static_cast<uint16_t>(VirtualKey::kMButton), (mouse_buttons & 4u) != 0);
++  }
++
+   uint16_t buttons = 0;
+   if (IsBindPressed(key_down_, REXCVAR_GET(keybind_a)))
+     buttons |= X_INPUT_GAMEPAD_A;
+@@ -333,9 +348,40 @@ X_RESULT MnkInputDriver::GetDeviceState(DeviceId id, X_INPUT_STATE* out_state) {
+ 
+   if (REXCVAR_GET(mnk_mouse) && IsMouseLookActive()) {
+     double sensitivity = REXCVAR_GET(mnk_sensitivity);
+-    constexpr double kBaseScale = 200.0;
+-    rx += static_cast<int32_t>(double(mouse_dx_) * sensitivity * kBaseScale);
+-    ry += static_cast<int32_t>(double(-mouse_dy_) * sensitivity * kBaseScale);
++    // Proportional mapping: 1 pixel at sensitivity 2.0 lands just above the
++    // Xbox deadzone (~7849). Snapping every speck of sensor noise onto 9000
++    // and holding it for a full frame is what made look shake.
++    constexpr double kBaseScale = 4200.0;
++    constexpr double kNoise = 0.35;
++    constexpr int32_t kDead = 7850;
++    float dx = mouse_dx_;
++    float dy = mouse_dy_;
++    if (std::fabs(dx) < kNoise) {
++      dx = 0.0f;
++    }
++    if (std::fabs(dy) < kNoise) {
++      dy = 0.0f;
++    }
++    look_carry_x_ += double(dx) * sensitivity * kBaseScale;
++    look_carry_y_ += double(-dy) * sensitivity * kBaseScale;
++    look_carry_x_ = std::clamp(look_carry_x_, double(INT16_MIN), double(INT16_MAX));
++    look_carry_y_ = std::clamp(look_carry_y_, double(INT16_MIN), double(INT16_MAX));
++    int32_t look_x = static_cast<int32_t>(std::lround(look_carry_x_));
++    int32_t look_y = static_cast<int32_t>(std::lround(look_carry_y_));
++    if (std::abs(look_x) >= kDead || std::abs(look_y) >= kDead) {
++      held_look_x_ = look_x;
++      held_look_y_ = look_y;
++      look_carry_x_ = 0.0;
++      look_carry_y_ = 0.0;
++      look_hold_polls_ = 2;
++    } else if (look_hold_polls_ > 0) {
++      --look_hold_polls_;
++    } else {
++      held_look_x_ = 0;
++      held_look_y_ = 0;
++    }
++    rx += held_look_x_;
++    ry += held_look_y_;
+   }
+   // Drained unconditionally: deltas keep accumulating in OnMouseMove while the
+   // mouse is off, and toggling it on would otherwise dump the whole backlog
+@@ -568,6 +614,11 @@ void MnkInputDriver::OnLostFocus(rex::ui::UISetupEvent&) {
+     std::memset(key_down_, 0, sizeof(key_down_));
+     mouse_dx_ = 0.0f;
+     mouse_dy_ = 0.0f;
++    look_carry_x_ = 0.0;
++    look_carry_y_ = 0.0;
++    held_look_x_ = 0;
++    held_look_y_ = 0;
++    look_hold_polls_ = 0;
+   }
+   if (attached_window_) {
+     ReleaseMouseCaptureFromUIThread(attached_window_);
+diff --git a/src/ui/imgui_drawer.cpp b/src/ui/imgui_drawer.cpp
+index f270f3c..cd3b64c 100644
+--- a/src/ui/imgui_drawer.cpp
++++ b/src/ui/imgui_drawer.cpp
+@@ -506,6 +506,11 @@ void ImGuiDrawer::OnKeyChar(KeyEvent& e) {
+ }
+ 
+ void ImGuiDrawer::OnMouseDown(MouseEvent& e) {
++  // Relative mouse is gameplay look. Capturing here steals SDL button events
++  // from the MnK driver and makes left/right click dead in-game.
++  if (window_->IsRelativeMouseMode()) {
++    return;
++  }
+   SwitchToPhysicalMouseAndUpdateMousePosition(e);
+   auto& io = GetIO();
+   int button = -1;
+@@ -534,10 +539,16 @@ void ImGuiDrawer::OnMouseDown(MouseEvent& e) {
+ }
+ 
+ void ImGuiDrawer::OnMouseMove(MouseEvent& e) {
++  if (window_->IsRelativeMouseMode()) {
++    return;
++  }
+   SwitchToPhysicalMouseAndUpdateMousePosition(e);
+ }
+ 
+ void ImGuiDrawer::OnMouseUp(MouseEvent& e) {
++  if (window_->IsRelativeMouseMode()) {
++    return;
++  }
+   SwitchToPhysicalMouseAndUpdateMousePosition(e);
+   auto& io = GetIO();
+   int button = -1;
+diff --git a/src/ui/keybinds.cpp b/src/ui/keybinds.cpp
+index 9822f3b..11f5847 100644
+--- a/src/ui/keybinds.cpp
++++ b/src/ui/keybinds.cpp
+@@ -139,8 +139,14 @@ static const std::unordered_map<std::string, VirtualKey> kKeyNames = {
+     {"ScrollLock", VirtualKey::kScroll},
+     // Mouse buttons
+     {"LMB", VirtualKey::kLButton},
++    {"lmb", VirtualKey::kLButton},
++    {"Mouse1", VirtualKey::kLButton},
+     {"RMB", VirtualKey::kRButton},
++    {"rmb", VirtualKey::kRButton},
++    {"Mouse2", VirtualKey::kRButton},
+     {"MMB", VirtualKey::kMButton},
++    {"mmb", VirtualKey::kMButton},
++    {"Mouse3", VirtualKey::kMButton},
+ };
+ 
+ VirtualKey ParseVirtualKey(std::string_view name) {
+diff --git a/src/ui/window_sdl.cpp b/src/ui/window_sdl.cpp
+index 2251429..91bbecd 100644
+--- a/src/ui/window_sdl.cpp
++++ b/src/ui/window_sdl.cpp
+@@ -251,6 +251,27 @@ bool WindowSDL::SetRelativeMouseMode(bool enable) {
+   return enable;
+ }
+ 
++bool WindowSDL::IsRelativeMouseMode() const {
++  return sdl_window_ && SDL_GetWindowRelativeMouseMode(sdl_window_);
++}
++
++uint32_t WindowSDL::QueryMouseButtons() const {
++  float x = 0.0f;
++  float y = 0.0f;
++  SDL_MouseButtonFlags flags = SDL_GetMouseState(&x, &y);
++  uint32_t mask = 0;
++  if (flags & SDL_BUTTON_LMASK) {
++    mask |= 1u;
++  }
++  if (flags & SDL_BUTTON_RMASK) {
++    mask |= 2u;
++  }
++  if (flags & SDL_BUTTON_MMASK) {
++    mask |= 4u;
++  }
++  return mask;
++}
++
+ bool WindowSDL::WarpMouseToCenter(int32_t& x_out, int32_t& y_out) {
+   if (!sdl_window_) {
+     return false;
+diff --git a/thirdparty/CMakeLists.txt b/thirdparty/CMakeLists.txt
+index f102b56..33e489c 100644
+--- a/thirdparty/CMakeLists.txt
++++ b/thirdparty/CMakeLists.txt
+@@ -125,8 +125,8 @@ target_include_directories(aes128 PUBLIC
+ target_compile_options(aes128 PRIVATE -w)
+ 
+ # libmspack - LZX decompression (only lzxd.c needed for XEX decompression)
+-# Uses cabextract version which has all needed headers in one place
+-set(MSPACK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libmspack/cabextract/mspack")
++# cabextract/mspack is a set of path-redirect stubs; the real sources live here.
++set(MSPACK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libmspack/libmspack/mspack")
+ add_library(mspack STATIC
+     ${MSPACK_DIR}/lzxd.c
+ )

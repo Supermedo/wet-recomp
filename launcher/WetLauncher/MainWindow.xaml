@@ -1,0 +1,362 @@
+<Window x:Class="Wet.Launcher.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="WET"
+        Height="820" Width="1280"
+        MinHeight="720" MinWidth="1080"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        ResizeMode="CanResize"
+        Background="#0B0808"
+        FontFamily="Segoe UI"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown"
+        MouseMove="Window_MouseMove"
+        MouseLeftButtonUp="Window_MouseLeftButtonUp">
+    <Window.Resources>
+        <Style x:Key="ShotFrame" TargetType="Border">
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="BorderBrush" Value="#55D4B06A" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Margin" Value="0,0,10,0" />
+            <Setter Property="ClipToBounds" Value="True" />
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Image Source="pack://application:,,,/Assets/hero.jpg"
+               Stretch="UniformToFill"
+               RenderOptions.BitmapScalingMode="HighQuality"
+               MouseLeftButtonDown="TitleBar_MouseLeftButtonDown" />
+        <Rectangle MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+            <Rectangle.Fill>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                    <GradientStop Color="#F20B0808" Offset="0" />
+                    <GradientStop Color="#A80B0808" Offset="0.38" />
+                    <GradientStop Color="#660B0808" Offset="0.72" />
+                    <GradientStop Color="#330B0808" Offset="1" />
+                </LinearGradientBrush>
+            </Rectangle.Fill>
+        </Rectangle>
+        <Rectangle MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+            <Rectangle.Fill>
+                <LinearGradientBrush StartPoint="0,1" EndPoint="0,0">
+                    <GradientStop Color="#E00B0808" Offset="0" />
+                    <GradientStop Color="#000B0808" Offset="0.42" />
+                </LinearGradientBrush>
+            </Rectangle.Fill>
+        </Rectangle>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="44" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Border x:Name="TitleBar"
+                    Background="#F20B0808" BorderBrush="#332218" BorderThickness="0,0,0,1"
+                    Panel.ZIndex="20"
+                    MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                <DockPanel Background="Transparent">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,12,0"
+                                Background="Transparent">
+                        <Image Source="pack://application:,,,/Assets/logo.png"
+                               Height="22" Stretch="Uniform" IsHitTestVisible="False"
+                               RenderOptions.BitmapScalingMode="HighQuality" />
+                        <TextBlock Text="PC PORT" VerticalAlignment="Center" IsHitTestVisible="False"
+                                   Margin="14,2,0,0" FontSize="11"
+                                   Foreground="#D4B06A" Opacity="0.9" />
+                        <TextBlock x:Name="MinimizeLabel" Text="MINIMIZE" VerticalAlignment="Center" Margin="28,0,0,0"
+                                   FontSize="11" Foreground="#F3E6D4" Cursor="Hand"
+                                   MouseLeftButtonDown="MinimizeLabel_MouseLeftButtonDown" />
+                        <Border x:Name="CloseLabel" Background="#C41616" CornerRadius="2" Padding="10,5" Margin="14,0,0,0"
+                                Cursor="Hand" MouseLeftButtonDown="CloseLabel_MouseLeftButtonDown">
+                            <TextBlock Text="CLOSE" FontSize="11" FontWeight="Bold" Foreground="White"
+                                       IsHitTestVisible="False" />
+                        </Border>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <Grid Grid.Row="1" Margin="28,10,24,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="268" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Margin="0,4,22,0">
+                    <Border BorderBrush="#C4D4B06A" BorderThickness="2" HorizontalAlignment="Left">
+                        <Border.Effect>
+                            <DropShadowEffect Color="Black" BlurRadius="18" ShadowDepth="6" Opacity="0.7" />
+                        </Border.Effect>
+                        <Image Source="pack://application:,,,/Assets/cover.jpg"
+                               Width="220" Stretch="Uniform"
+                               RenderOptions.BitmapScalingMode="HighQuality" />
+                    </Border>
+
+                    <Border Background="#CC0C0808" CornerRadius="3" Padding="10,5"
+                            Margin="0,12,0,0" HorizontalAlignment="Left">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse x:Name="StatusDot" Width="8" Height="8" Fill="#D4B06A" Margin="0,0,8,0" />
+                            <TextBlock x:Name="StatusBadge" Text="WAITING FOR ISO"
+                                       FontSize="11" FontWeight="SemiBold"
+                                       Foreground="#D4B06A" />
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock x:Name="StatusText"
+                               Text="Add your WET Xbox 360 ISO to begin."
+                               FontSize="14" FontWeight="SemiBold"
+                               TextWrapping="Wrap" Margin="0,10,0,0" />
+
+                    <Button x:Name="PlayButton" Content="PLAY"
+                            Style="{StaticResource PlayButton}"
+                            FontSize="22" Height="52" Margin="0,14,0,0"
+                            Click="Play_Click" IsEnabled="False" />
+
+                    <Button x:Name="ImportIsoButton" Content="ADD ISO"
+                            Style="{StaticResource GhostButton}"
+                            FontSize="13" Height="38" Margin="0,8,0,0"
+                            Click="ImportIso_Click" />
+
+                    <ProgressBar x:Name="IsoProgress" Margin="0,10,0,0"
+                                 Visibility="Collapsed" IsIndeterminate="True" />
+
+                    <TextBlock x:Name="NoteText" FontSize="11" Foreground="#B8A090"
+                               TextWrapping="Wrap" Margin="0,10,0,0"
+                               Text="Own a dumped Xbox 360 disc. The launcher only extracts an ISO you provide." />
+                </StackPanel>
+
+                <TabControl Grid.Column="1" Margin="8,4,0,0">
+                    <TabItem Header="PLAY">
+                        <StackPanel Margin="4,4,8,0">
+                            <Image Source="pack://application:,,,/Assets/logo.png"
+                                   Height="58" Stretch="Uniform" HorizontalAlignment="Left"
+                                   RenderOptions.BitmapScalingMode="HighQuality" />
+                            <TextBlock Text="XBOX 360  ·  ReXGlue PC PORT"
+                                       FontSize="12" Foreground="#D4B06A"
+                                       Margin="2,10,0,0" />
+                            <Border Background="#990B0808" CornerRadius="4" Padding="12,10" Margin="0,12,40,0" MaxWidth="540" HorizontalAlignment="Left">
+                                <TextBlock TextWrapping="Wrap" FontSize="14"
+                                           Foreground="#F3E6D4"
+                                           Text="Become Rubi Malone: dual pistols, a katana, and over-the-top acrobatics across three continents. Import your ISO, then hit PLAY." />
+                            </Border>
+
+                            <TextBlock Text="SCREENSHOTS" FontSize="11" Foreground="#D4B06A"
+                                       Margin="0,22,0,8" />
+                            <UniformGrid Columns="4" Rows="1" Margin="0,0,8,0">
+                                <Border Style="{StaticResource ShotFrame}" Margin="0,0,10,0">
+                                    <Image Source="pack://application:,,,/Assets/ss1.jpg" Stretch="UniformToFill"
+                                           Height="96" RenderOptions.BitmapScalingMode="HighQuality" />
+                                </Border>
+                                <Border Style="{StaticResource ShotFrame}" Margin="0,0,10,0">
+                                    <Image Source="pack://application:,,,/Assets/ss2.jpg" Stretch="UniformToFill"
+                                           Height="96" RenderOptions.BitmapScalingMode="HighQuality" />
+                                </Border>
+                                <Border Style="{StaticResource ShotFrame}" Margin="0,0,10,0">
+                                    <Image Source="pack://application:,,,/Assets/ss3.jpg" Stretch="UniformToFill"
+                                           Height="96" RenderOptions.BitmapScalingMode="HighQuality" />
+                                </Border>
+                                <Border Style="{StaticResource ShotFrame}" Margin="0">
+                                    <Image Source="pack://application:,,,/Assets/ss4.jpg" Stretch="UniformToFill"
+                                           Height="96" RenderOptions.BitmapScalingMode="HighQuality" />
+                                </Border>
+                            </UniformGrid>
+                            <TextBlock Margin="0,12,8,0" FontSize="11" Foreground="#8A7868"
+                                       Text="F3 opens the same settings menu in-game after the port is running." />
+                        </StackPanel>
+                    </TabItem>
+
+                    <TabItem Header="SETTINGS">
+                        <Border CornerRadius="8" BorderBrush="#446A2218" BorderThickness="1">
+                            <Border.Background>
+                                <ImageBrush ImageSource="pack://application:,,,/Assets/parchment.jpg"
+                                            Stretch="UniformToFill" Opacity="0.18" />
+                            </Border.Background>
+                            <Border Background="#E0140E0C" CornerRadius="8" Padding="8">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <StackPanel Margin="10">
+                                    <GroupBox Header="DISPLAY">
+                                        <Grid Margin="2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="170" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <Label Content="Resolution" />
+                                            <ComboBox x:Name="ResolutionCombo" Grid.Column="1" Margin="0,4" />
+                                            <Label Content="Frame pace" Grid.Row="1" />
+                                            <ComboBox x:Name="FrameRateCombo" Grid.Row="1" Grid.Column="1" Margin="0,4" />
+                                            <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,10,0,0">
+                                                <CheckBox x:Name="FullscreenCheck" Content="Fullscreen" IsChecked="True" Margin="0,0,22,0" />
+                                                <CheckBox x:Name="VSyncCheck" Content="VSync" IsChecked="True" Margin="0,0,22,0" />
+                                                <CheckBox x:Name="FpsOverlayCheck" Content="FPS overlay" />
+                                            </StackPanel>
+                                            <TextBlock x:Name="DisplayHintText" Grid.Row="3" Grid.ColumnSpan="2"
+                                                       Margin="0,10,0,0" Foreground="#B8A090" TextWrapping="Wrap"
+                                                       Text="1080p / 2K / 4K set internal render size. Auto matches your monitor." />
+                                        </Grid>
+                                    </GroupBox>
+
+                                    <GroupBox Header="GRAPHICS">
+                                        <Grid Margin="2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="170" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <Label Content="Quality preset" />
+                                            <ComboBox x:Name="QualityCombo" Grid.Column="1" Margin="0,4"
+                                                      SelectionChanged="QualityCombo_SelectionChanged" />
+                                            <Label Content="Anti-aliasing" Grid.Row="1" />
+                                            <ComboBox x:Name="AACombo" Grid.Row="1" Grid.Column="1" Margin="0,4" />
+                                            <Label Content="Texture filtering" Grid.Row="2" />
+                                            <ComboBox x:Name="AnisoCombo" Grid.Row="2" Grid.Column="1" Margin="0,4" />
+                                            <Label Content="Post-process" Grid.Row="3" />
+                                            <ComboBox x:Name="PostCombo" Grid.Row="3" Grid.Column="1" Margin="0,4" />
+                                        </Grid>
+                                    </GroupBox>
+
+                                    <TextBlock Text="Settings apply when you click PLAY."
+                                               Foreground="#8A7868" FontSize="11" />
+                                </StackPanel>
+                            </ScrollViewer>
+                            </Border>
+                        </Border>
+                    </TabItem>
+
+                    <TabItem Header="CONTROLS">
+                        <Border CornerRadius="8" BorderBrush="#446A2218" BorderThickness="1">
+                            <Border.Background>
+                                <ImageBrush ImageSource="pack://application:,,,/Assets/parchment.jpg"
+                                            Stretch="UniformToFill" Opacity="0.14" />
+                            </Border.Background>
+                            <Border Background="#E0140E0C" CornerRadius="8" Padding="8">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <StackPanel Margin="10">
+                                    <GroupBox Header="CONTROLLER">
+                                        <StackPanel Margin="2">
+                                            <CheckBox x:Name="SdlControllerCheck" Content="SDL controller backend (Xbox / PlayStation / Switch)" IsChecked="True" />
+                                            <CheckBox x:Name="MnkCheck" Content="Keyboard and mouse as a controller" IsChecked="True" />
+                                            <CheckBox x:Name="MouseLookCheck" Content="Mouse looks (right stick)" IsChecked="True" />
+                                            <Grid Margin="0,8,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="170" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <Label Content="Mouse sensitivity" />
+                                                <ComboBox x:Name="SensitivityCombo" Grid.Column="1" Margin="0,4" />
+                                            </Grid>
+                                        </StackPanel>
+                                    </GroupBox>
+
+                                    <GroupBox Header="KEYBOARD BINDINGS">
+                                        <StackPanel Margin="2">
+                                            <TextBlock Text="Left click shoots, right click sword. Click a box, then press a key or mouse button. Applied when you click PLAY."
+                                                       Foreground="#B8A090" FontSize="11" Margin="0,0,0,10" />
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="150" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="150" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                </Grid.RowDefinitions>
+
+                                                <Label Content="A / Confirm" />
+                                                <TextBox x:Name="KeyA" Grid.Column="1" Margin="0,2,8,2" PreviewKeyDown="KeyField_PreviewKeyDown" />
+                                                <Label Content="B / Cancel" Grid.Column="2" />
+                                                <TextBox x:Name="KeyB" Grid.Column="3" Margin="0,2" PreviewKeyDown="KeyField_PreviewKeyDown" />
+
+                                                <Label Content="X / Melee" Grid.Row="1" />
+                                                <TextBox x:Name="KeyX" Grid.Row="1" Grid.Column="1" Margin="0,2,8,2" PreviewKeyDown="KeyField_PreviewKeyDown" />
+                                                <Label Content="Y / Alt" Grid.Row="1" Grid.Column="2" />
+                                                <TextBox x:Name="KeyY" Grid.Row="1" Grid.Column="3" Margin="0,2" PreviewKeyDown="KeyField_PreviewKeyDown" />
+
+                                                <Label Content="LB" Grid.Row="2" />
+                                                <TextBox x:Name="KeyLS" Grid.Row="2" Grid.Column="1" Margin="0,2,8,2" PreviewKeyDown="KeyField_PreviewKeyDown" />
+                                                <Label Content="RB / Sword" Grid.Row="2" Grid.Column="2" />
+                                                <TextBox x:Name="KeyRS" Grid.Row="2" Grid.Column="3" Margin="0,2" PreviewKeyDown="KeyField_PreviewKeyDown" />
+
+                                                <Label Content="LT / Left gun" Grid.Row="3" />
+                                                <TextBox x:Name="KeyLT" Grid.Row="3" Grid.Column="1" Margin="0,2,8,2" PreviewKeyDown="KeyField_PreviewKeyDown" />
+                                                <Label Content="RT / Shoot" Grid.Row="3" Grid.Column="2" />
+                                                <TextBox x:Name="KeyRT" Grid.Row="3" Grid.Column="3" Margin="0,2" PreviewKeyDown="KeyField_PreviewKeyDown" />
+
+                                                <Label Content="Move W/A/S/D" Grid.Row="4" />
+                                                <TextBox x:Name="KeyLUp" Grid.Row="4" Grid.Column="1" Margin="0,2,8,2" PreviewKeyDown="KeyField_PreviewKeyDown" />
+                                                <Label Content="Move down" Grid.Row="4" Grid.Column="2" />
+                                                <TextBox x:Name="KeyLDown" Grid.Row="4" Grid.Column="3" Margin="0,2" PreviewKeyDown="KeyField_PreviewKeyDown" />
+
+                                                <Label Content="Move left" Grid.Row="5" />
+                                                <TextBox x:Name="KeyLLeft" Grid.Row="5" Grid.Column="1" Margin="0,2,8,2" PreviewKeyDown="KeyField_PreviewKeyDown" />
+                                                <Label Content="Move right" Grid.Row="5" Grid.Column="2" />
+                                                <TextBox x:Name="KeyLRight" Grid.Row="5" Grid.Column="3" Margin="0,2" PreviewKeyDown="KeyField_PreviewKeyDown" />
+
+                                                <Label Content="Stick press" Grid.Row="6" />
+                                                <TextBox x:Name="KeyLPress" Grid.Row="6" Grid.Column="1" Margin="0,2,8,2" PreviewKeyDown="KeyField_PreviewKeyDown" />
+                                                <Label Content="Camera press" Grid.Row="6" Grid.Column="2" />
+                                                <TextBox x:Name="KeyRPress" Grid.Row="6" Grid.Column="3" Margin="0,2" PreviewKeyDown="KeyField_PreviewKeyDown" />
+
+                                                <Label Content="Camera up" Grid.Row="7" />
+                                                <TextBox x:Name="KeyRUp" Grid.Row="7" Grid.Column="1" Margin="0,2,8,2" PreviewKeyDown="KeyField_PreviewKeyDown" />
+                                                <Label Content="Camera down" Grid.Row="7" Grid.Column="2" />
+                                                <TextBox x:Name="KeyRDown" Grid.Row="7" Grid.Column="3" Margin="0,2" PreviewKeyDown="KeyField_PreviewKeyDown" />
+
+                                                <Label Content="Camera left" Grid.Row="8" />
+                                                <TextBox x:Name="KeyRLeft" Grid.Row="8" Grid.Column="1" Margin="0,2,8,2" PreviewKeyDown="KeyField_PreviewKeyDown" />
+                                                <Label Content="Camera right" Grid.Row="8" Grid.Column="2" />
+                                                <TextBox x:Name="KeyRRight" Grid.Row="8" Grid.Column="3" Margin="0,2" PreviewKeyDown="KeyField_PreviewKeyDown" />
+
+                                                <Label Content="Start" Grid.Row="9" />
+                                                <TextBox x:Name="KeyStart" Grid.Row="9" Grid.Column="1" Margin="0,2,8,2" PreviewKeyDown="KeyField_PreviewKeyDown" />
+                                                <Label Content="Back" Grid.Row="9" Grid.Column="2" />
+                                                <TextBox x:Name="KeyBack" Grid.Row="9" Grid.Column="3" Margin="0,2" PreviewKeyDown="KeyField_PreviewKeyDown" />
+
+                                                <Label Content="D-pad up" Grid.Row="10" />
+                                                <TextBox x:Name="KeyDUp" Grid.Row="10" Grid.Column="1" Margin="0,2,8,2" PreviewKeyDown="KeyField_PreviewKeyDown" />
+                                                <Label Content="D-pad down" Grid.Row="10" Grid.Column="2" />
+                                                <TextBox x:Name="KeyDDown" Grid.Row="10" Grid.Column="3" Margin="0,2" PreviewKeyDown="KeyField_PreviewKeyDown" />
+
+                                                <Label Content="D-pad left" Grid.Row="11" />
+                                                <TextBox x:Name="KeyDLeft" Grid.Row="11" Grid.Column="1" Margin="0,2,8,2" PreviewKeyDown="KeyField_PreviewKeyDown" />
+                                                <Label Content="D-pad right" Grid.Row="11" Grid.Column="2" />
+                                                <TextBox x:Name="KeyDRight" Grid.Row="11" Grid.Column="3" Margin="0,2" PreviewKeyDown="KeyField_PreviewKeyDown" />
+                                            </Grid>
+                                            <Button Content="Reset keyboard defaults" Width="210" HorizontalAlignment="Left"
+                                                    Style="{StaticResource GhostButton}"
+                                                    Margin="0,14,0,0" Padding="12,8" Click="ResetKeybinds_Click" />
+                                        </StackPanel>
+                                    </GroupBox>
+                                </StackPanel>
+                            </ScrollViewer>
+                            </Border>
+                        </Border>
+                    </TabItem>
+                </TabControl>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

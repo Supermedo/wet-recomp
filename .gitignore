@@ -1,0 +1,45 @@
+# Build
+out/
+build/
+.vs/
+*.user
+CMakeUserPresets.json
+
+# Game data — dump your own ISO, do not commit it
+game/*
+!game/.gitkeep
+*.iso
+*.xiso
+dlc/
+
+# Codegen output (needs default.xex)
+generated/default/
+wet_manifest.toml
+
+# SDK is cloned by setup.ps1
+thirdparty/rexglue-sdk/
+thirdparty/rexglue-sdk-prebuilt/
+*.zip
+
+# Local binaries
+*.exe
+*.dll
+*.pdb
+*.lib
+*.exp
+
+# Launcher MSBuild
+launcher/**/bin/
+launcher/**/obj/
+
+# Logs / junk
+logs/
+src-port-backup/
+*.bak
+
+# extract-xiso binary drop
+tools/extract-xiso/
+
+# OS
+Thumbs.db
+.DS_Store
