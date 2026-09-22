@@ -17,6 +17,7 @@ namespace Wet.Launcher
     {
         private readonly string _root;
         private bool _importing;
+        private bool _updating;
         private bool _dragging;
         private Point _dragCursor;
         private Point _dragWindow;
@@ -27,6 +28,8 @@ namespace Wet.Launcher
             _root = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             PopulateSettings();
             WireKeybindMouse();
+            if (VersionLabel != null)
+                VersionLabel.Text = "PC PORT  ·  v" + GitHubUpdater.CurrentVersion();
             RefreshStatus();
         }
 
@@ -101,7 +104,10 @@ namespace Wet.Launcher
             while (source != null)
             {
                 var element = source as FrameworkElement;
-                if (element != null && (element.Name == "MinimizeLabel" || element.Name == "CloseLabel"))
+                if (element != null && (element.Name == "MinimizeLabel" ||
+                                        element.Name == "CloseLabel" ||
+                                        element.Name == "UpdateLabel" ||
+                                        element.Name == "SupportLink"))
                     return true;
                 if (source is Button || source is TextBox || source is ComboBox ||
                     source is ComboBoxItem || source is CheckBox || source is TabItem ||
@@ -179,18 +185,26 @@ namespace Wet.Launcher
             QualityCombo.ItemsSource = new List<string>
             {
                 "Performance",
-                "Balanced (recommended)",
-                "Quality",
+                "Balanced",
+                "Quality (recommended)",
                 "Ultra"
             };
-            QualityCombo.SelectedIndex = 1;
+            QualityCombo.SelectedIndex = 2;
+
+            ScaleCombo.ItemsSource = new List<string>
+            {
+                "Native (1x)",
+                "High (2x)",
+                "Ultra (3x)"
+            };
+            ScaleCombo.SelectedIndex = 1;
 
             AACombo.ItemsSource = new List<string> { "Off", "FXAA", "FXAA Extreme" };
-            AACombo.SelectedIndex = 1;
+            AACombo.SelectedIndex = 2;
             AnisoCombo.ItemsSource = new List<string> { "Default", "4x", "8x", "16x" };
             AnisoCombo.SelectedIndex = 3;
-            PostCombo.ItemsSource = new List<string> { "Bilinear", "Sharpen" };
-            PostCombo.SelectedIndex = 0;
+            PostCombo.ItemsSource = new List<string> { "Off", "On" };
+            PostCombo.SelectedIndex = 1;
 
             SensitivityCombo.ItemsSource = new List<string>
             {
@@ -203,31 +217,49 @@ namespace Wet.Launcher
 
         private void QualityCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (AACombo == null || AnisoCombo == null || PostCombo == null) return;
+            if (AACombo == null || AnisoCombo == null || PostCombo == null || ScaleCombo == null)
+                return;
             int quality = QualityCombo.SelectedIndex;
             if (quality <= 0)
             {
+                ScaleCombo.SelectedIndex = 0;
                 AACombo.SelectedIndex = 0;
                 AnisoCombo.SelectedIndex = 1;
                 PostCombo.SelectedIndex = 0;
             }
             else if (quality == 1)
             {
+                ScaleCombo.SelectedIndex = 0;
                 AACombo.SelectedIndex = 1;
                 AnisoCombo.SelectedIndex = 3;
                 PostCombo.SelectedIndex = 0;
             }
             else if (quality == 2)
             {
+                ScaleCombo.SelectedIndex = 1;
                 AACombo.SelectedIndex = 2;
                 AnisoCombo.SelectedIndex = 3;
                 PostCombo.SelectedIndex = 1;
             }
             else
             {
+                int res = ResolutionCombo != null ? ResolutionCombo.SelectedIndex : 1;
+                ScaleCombo.SelectedIndex = res <= 1 ? 2 : 1;
                 AACombo.SelectedIndex = 2;
                 AnisoCombo.SelectedIndex = 3;
                 PostCombo.SelectedIndex = 1;
+            }
+        }
+
+        private void SupportLink_Click(object sender, MouseButtonEventArgs e)
+        {
+            e.Handled = true;
+            try
+            {
+                Process.Start("https://buymeacoffee.com/mohmmadpodt");
+            }
+            catch
+            {
             }
         }
 
@@ -405,7 +437,7 @@ namespace Wet.Launcher
 
         private void ImportIso_Click(object sender, RoutedEventArgs e)
         {
-            if (_importing) return;
+            if (_importing || _updating) return;
 
             if (IsoImporter.FindExtractor(_root) == null)
             {
@@ -434,6 +466,9 @@ namespace Wet.Launcher
             ImportIsoButton.IsEnabled = false;
             PlayButton.IsEnabled = false;
             IsoProgress.Visibility = Visibility.Visible;
+            IsoProgress.IsIndeterminate = true;
+            if (UpdateButton != null)
+                UpdateButton.IsEnabled = false;
             NoteText.Text = "Extracting ISO...";
 
             string iso = dialog.FileName;
@@ -449,6 +484,8 @@ namespace Wet.Launcher
                 {
                     _importing = false;
                     ImportIsoButton.IsEnabled = true;
+                    if (UpdateButton != null)
+                        UpdateButton.IsEnabled = true;
                     IsoProgress.Visibility = Visibility.Collapsed;
                     if (!result.Success)
                     {
@@ -470,6 +507,140 @@ namespace Wet.Launcher
                     RefreshStatus();
                 }));
             }));
+        }
+
+        private void UpdateLabel_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            e.Handled = true;
+            EndWindowDrag();
+            CheckUpdate_Click(sender, e);
+        }
+
+        private void CheckUpdate_Click(object sender, RoutedEventArgs e)
+        {
+            if (_updating || _importing) return;
+
+            _updating = true;
+            UpdateButton.IsEnabled = false;
+            ImportIsoButton.IsEnabled = false;
+            IsoProgress.Visibility = Visibility.Visible;
+            IsoProgress.IsIndeterminate = true;
+            NoteText.Text = "Checking GitHub for a newer release...";
+
+            Task.Factory.StartNew(new Action(() =>
+            {
+                try
+                {
+                    GitHubRelease release = GitHubUpdater.FetchLatest();
+                    Dispatcher.Invoke(new Action(() =>
+                    {
+                        if (!GitHubUpdater.IsNewer(release.Version))
+                        {
+                            FinishUpdateCheck("You're on the latest GitHub release (v" +
+                                              GitHubUpdater.CurrentVersion() + ").");
+                            return;
+                        }
+
+                        MessageBoxResult answer = MessageBox.Show(
+                            "Version " + release.Version + " is available on GitHub.\n" +
+                            "You have v" + GitHubUpdater.CurrentVersion() + ".\n\n" +
+                            "Download and install it now? Your game ISO files will be kept.",
+                            "WET update",
+                            MessageBoxButton.YesNo,
+                            MessageBoxImage.Question);
+                        if (answer != MessageBoxResult.Yes)
+                        {
+                            FinishUpdateCheck("Update skipped. v" + release.Version + " is still available.");
+                            return;
+                        }
+
+                        if (GitHubUpdater.GameProcessRunning())
+                        {
+                            MessageBox.Show("Close the game before updating.", "WET update",
+                                MessageBoxButton.OK, MessageBoxImage.Warning);
+                            FinishUpdateCheck("Close wet.exe, then check for updates again.");
+                            return;
+                        }
+
+                        StartDownload(release);
+                    }));
+                }
+                catch (Exception ex)
+                {
+                    Dispatcher.Invoke(new Action(() =>
+                    {
+                        FinishUpdateCheck("Could not reach GitHub.");
+                        MessageBox.Show("Update check failed:\n" + ex.Message, "WET update",
+                            MessageBoxButton.OK, MessageBoxImage.Error);
+                    }));
+                }
+            }));
+        }
+
+        private void StartDownload(GitHubRelease release)
+        {
+            IsoProgress.IsIndeterminate = false;
+            IsoProgress.Value = 0;
+            NoteText.Text = "Downloading v" + release.Version + " from GitHub...";
+
+            string work = Path.Combine(Path.GetTempPath(), "wet-recomp-update");
+            string zip = Path.Combine(work, "package.zip");
+            Task.Factory.StartNew(new Action(() =>
+            {
+                try
+                {
+                    if (Directory.Exists(work))
+                        Directory.Delete(work, true);
+                    Directory.CreateDirectory(work);
+
+                    GitHubUpdater.Download(release.ZipUrl, zip, percent =>
+                    {
+                        Dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            IsoProgress.Value = percent;
+                            NoteText.Text = "Downloading v" + release.Version + " (" + percent + "%)...";
+                        }));
+                    });
+
+                    Dispatcher.Invoke(new Action(() =>
+                    {
+                        IsoProgress.IsIndeterminate = true;
+                        NoteText.Text = "Installing v" + release.Version + "...";
+                    }));
+
+                    string payload = GitHubUpdater.ExtractZip(zip, Path.Combine(work, "unpack"));
+                    try { File.Delete(zip); } catch { }
+
+                    Dispatcher.Invoke(new Action(() =>
+                    {
+                        NoteText.Text = "Restarting to finish v" + release.Version + "...";
+                        GitHubUpdater.ApplyAndRestart(_root, payload);
+                        Application.Current.Shutdown();
+                    }));
+                }
+                catch (Exception ex)
+                {
+                    Dispatcher.Invoke(new Action(() =>
+                    {
+                        FinishUpdateCheck("Update download failed.");
+                        MessageBox.Show("Update failed:\n" + ex.Message, "WET update",
+                            MessageBoxButton.OK, MessageBoxImage.Error);
+                    }));
+                }
+            }));
+        }
+
+        private void FinishUpdateCheck(string message)
+        {
+            _updating = false;
+            UpdateButton.IsEnabled = true;
+            ImportIsoButton.IsEnabled = true;
+            IsoProgress.Visibility = Visibility.Collapsed;
+            IsoProgress.IsIndeterminate = true;
+            IsoProgress.Value = 0;
+            RefreshStatus();
+            if (!string.IsNullOrEmpty(message))
+                NoteText.Text = message;
         }
 
         private void Play_Click(object sender, RoutedEventArgs e)
@@ -527,22 +698,28 @@ namespace Wet.Launcher
                 args.Add("--resolution=1080p");
                 args.Add("--window_width=1920");
                 args.Add("--window_height=1080");
-                args.Add("--resolution_scale=1");
             }
             else if (resFlag == "1440p")
             {
                 args.Add("--resolution=1440p");
                 args.Add("--window_width=2560");
                 args.Add("--window_height=1440");
-                args.Add("--resolution_scale=2");
             }
             else if (resFlag == "4k")
             {
                 args.Add("--resolution=4k");
                 args.Add("--window_width=3840");
                 args.Add("--window_height=2160");
-                args.Add("--resolution_scale=3");
             }
+
+            string[] scales = { "1", "2", "3" };
+            int scaleIndex = Math.Max(0, ScaleCombo.SelectedIndex);
+            if ((resFlag == "1440p" || resFlag == "4k") && scaleIndex > 1)
+                scaleIndex = 1;
+            string scale = scales[Math.Min(scaleIndex, scales.Length - 1)];
+            args.Add("--resolution_scale=" + scale);
+            args.Add("--draw_resolution_scale_x=" + scale);
+            args.Add("--draw_resolution_scale_y=" + scale);
 
             int fps = FrameRateCombo.SelectedIndex;
             string mode = "auto";
@@ -563,14 +740,17 @@ namespace Wet.Launcher
             args.Add("--d3d12_allow_variable_refresh_rate_and_tearing=true");
 
             string[] aa = { "none", "fxaa", "fxaa_extreme" };
-            string[] aniso = { "-1", "4", "8", "16" };
+            string[] aniso = { "-1", "3", "4", "5" };
             int aaIndex = Math.Max(0, AACombo.SelectedIndex);
             int anisoIndex = Math.Max(0, AnisoCombo.SelectedIndex);
             args.Add("--swap_post_effect=" + aa[Math.Min(aaIndex, aa.Length - 1)]);
             args.Add("--anisotropic_override=" + aniso[Math.Min(anisoIndex, aniso.Length - 1)]);
             args.Add("--present_effect=bilinear");
+            args.Add("--native_2x_msaa=true");
             if (PostCombo.SelectedIndex > 0)
                 args.Add("--present_dither=true");
+            else
+                args.Add("--present_dither=false");
 
             args.Add("--mnk_mode=" + ((MnkCheck.IsChecked ?? true) ? "true" : "false"));
             args.Add("--mnk_mouse=" + ((MouseLookCheck.IsChecked ?? true) ? "true" : "false"));

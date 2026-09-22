@@ -33,7 +33,7 @@ class WetSettingsMenu : public rex::ui::ImGuiDialog {
     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.85f, 0.95f, 0.98f, 1.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
 
-    ImGui::SetNextWindowSize(ImVec2(560, 620), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(560, 660), ImGuiCond_Always);
     bool visible = true;
     if (ImGui::Begin("##wet_settings", &visible,
                      ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
@@ -44,6 +44,7 @@ class WetSettingsMenu : public rex::ui::ImGuiDialog {
       ImGui::SetWindowFontScale(1.0f);
       ImGui::PopStyleColor();
       ImGui::TextUnformatted("SETTINGS");
+      ImGui::TextUnformatted("Ported by Mohammed Albarghouthi");
       ImGui::Separator();
       ImGui::Spacing();
 
@@ -100,9 +101,13 @@ class WetSettingsMenu : public rex::ui::ImGuiDialog {
                      "Performance\0Balanced\0Quality\0Ultra\0")) {
       FillPreset(preset_);
     }
+    ImGui::Combo("Render scale", &scale_, "Native (1x)\0High (2x)\0Ultra (3x)\0");
     ImGui::Combo("Anti-aliasing", &aa_, "Off\0FXAA\0FXAA Extreme\0");
     ImGui::Combo("Filtering", &aniso_, "Default\04x\08x\016x\0");
-    ImGui::Combo("Post-process", &post_, "Bilinear\0Sharper dither\0");
+    ImGui::Combo("Sharpen", &post_, "Off\0On\0");
+    ImGui::TextWrapped(
+        "Render scale redraws the game above Xbox 360 resolution. "
+        "2x is the usual upgrade. 3x is capped at 1080p.");
   }
 
   void DrawControls() {
@@ -118,21 +123,25 @@ class WetSettingsMenu : public rex::ui::ImGuiDialog {
   void FillPreset(int preset) {
     switch (preset) {
       case 0:
+        scale_ = 0;
         aa_ = 0;
         aniso_ = 1;
         post_ = 0;
         break;
       case 1:
+        scale_ = 0;
         aa_ = 1;
         aniso_ = 3;
         post_ = 0;
         break;
       case 2:
+        scale_ = 1;
         aa_ = 2;
         aniso_ = 3;
         post_ = 1;
         break;
       default:
+        scale_ = resolution_ <= 1 ? 2 : 1;
         aa_ = 2;
         aniso_ = 3;
         post_ = 1;
@@ -144,22 +153,30 @@ class WetSettingsMenu : public rex::ui::ImGuiDialog {
     const char* presets[] = {"", "1080p", "1440p", "4k"};
     const char* widths[] = {"0", "1920", "2560", "3840"};
     const char* heights[] = {"0", "1080", "1440", "2160"};
-    const char* scales[] = {"1", "1", "2", "3"};
     if (resolution_ <= 0) return;
     rex::cvar::SetFlagByName("resolution", presets[resolution_]);
     rex::cvar::SetFlagByName("window_width", widths[resolution_]);
     rex::cvar::SetFlagByName("window_height", heights[resolution_]);
-    rex::cvar::SetFlagByName("resolution_scale", scales[resolution_]);
+  }
+
+  void ApplyScale() {
+    const char* scales[] = {"1", "2", "3"};
+    int scale = scale_;
+    if (resolution_ >= 2 && scale > 1) scale = 1;
+    rex::cvar::SetFlagByName("resolution_scale", scales[scale]);
+    rex::cvar::SetFlagByName("draw_resolution_scale_x", scales[scale]);
+    rex::cvar::SetFlagByName("draw_resolution_scale_y", scales[scale]);
   }
 
   void Apply() {
     const char* aa[] = {"none", "fxaa", "fxaa_extreme"};
-    const char* aniso[] = {"-1", "4", "8", "16"};
+    const char* aniso[] = {"-1", "3", "4", "5"};
     const char* modes[] = {"auto", "60", "120", "144", "unlocked"};
     rex::cvar::SetFlagByName("swap_post_effect", aa[aa_]);
     rex::cvar::SetFlagByName("anisotropic_override", aniso[aniso_]);
     rex::cvar::SetFlagByName("present_effect", "bilinear");
     rex::cvar::SetFlagByName("present_dither", post_ > 0 ? "true" : "false");
+    rex::cvar::SetFlagByName("native_2x_msaa", "true");
     rex::cvar::SetFlagByName("framerate_mode", modes[fps_mode_]);
     rex::cvar::SetFlagByName("fullscreen", fullscreen_ ? "true" : "false");
     rex::cvar::SetFlagByName("show_fps_overlay", fps_overlay_ ? "true" : "false");
@@ -178,8 +195,9 @@ class WetSettingsMenu : public rex::ui::ImGuiDialog {
     std::snprintf(sens, sizeof(sens), "%.1f", sensitivity_);
     rex::cvar::SetFlagByName("mnk_sensitivity", sens);
     ApplyResolution();
+    ApplyScale();
     std::snprintf(status_, sizeof(status_),
-                  "Applied. Resolution and frame pace need a restart.");
+                  "Applied. Resolution, render scale, and frame pace need a restart.");
   }
 
   void SyncFromCvars() {
@@ -193,7 +211,7 @@ class WetSettingsMenu : public rex::ui::ImGuiDialog {
     else
       resolution_ = 0;
 
-    const std::string aa = SafeQueryString("swap_post_effect", "fxaa");
+    const std::string aa = SafeQueryString("swap_post_effect", "fxaa_extreme");
     if (aa == "fxaa_extreme")
       aa_ = 2;
     else if (aa == "fxaa")
@@ -201,15 +219,23 @@ class WetSettingsMenu : public rex::ui::ImGuiDialog {
     else
       aa_ = 0;
 
-    const int aniso = SafeQueryInt("anisotropic_override", 16);
-    if (aniso >= 16)
+    const int aniso = SafeQueryInt("anisotropic_override", 5);
+    if (aniso >= 5)
       aniso_ = 3;
-    else if (aniso >= 8)
+    else if (aniso == 4)
       aniso_ = 2;
-    else if (aniso >= 4)
+    else if (aniso >= 1)
       aniso_ = 1;
     else
       aniso_ = 0;
+
+    const int scale = SafeQueryInt("resolution_scale", 2);
+    if (scale >= 3)
+      scale_ = 2;
+    else if (scale >= 2)
+      scale_ = 1;
+    else
+      scale_ = 0;
 
     const std::string mode = REXCVAR_GET(framerate_mode);
     if (mode == "60")
@@ -262,11 +288,12 @@ class WetSettingsMenu : public rex::ui::ImGuiDialog {
   }
 
   bool open_ = false;
-  int preset_ = 1;
+  int preset_ = 2;
   int resolution_ = 1;
-  int aa_ = 1;
+  int scale_ = 1;
+  int aa_ = 2;
   int aniso_ = 3;
-  int post_ = 0;
+  int post_ = 1;
   int fps_mode_ = 0;
   bool vsync_ = true;
   bool fullscreen_ = true;

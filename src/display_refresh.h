@@ -84,9 +84,14 @@ inline void ApplyDefaultGraphicsQuality() {
       rex::cvar::SetFlagByName(name, value);
     }
   };
-  set_if_default("anisotropic_override", "16");
-  set_if_default("swap_post_effect", "fxaa");
+  set_if_default("anisotropic_override", "5");
+  set_if_default("swap_post_effect", "fxaa_extreme");
   set_if_default("present_effect", "bilinear");
+  set_if_default("present_dither", "true");
+  set_if_default("resolution_scale", "2");
+  set_if_default("draw_resolution_scale_x", "2");
+  set_if_default("draw_resolution_scale_y", "2");
+  set_if_default("native_2x_msaa", "true");
   set_if_default("vsync", "true");
   set_if_default("d3d12_host_vsync", "true");
   set_if_default("d3d12_allow_variable_refresh_rate_and_tearing", "true");

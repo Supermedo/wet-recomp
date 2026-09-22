@@ -13,6 +13,7 @@
     <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb8a0c7d8e3e};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <OutputPath>bin\$(Configuration)\</OutputPath>
     <BaseIntermediateOutputPath>obj\$(Configuration)\</BaseIntermediateOutputPath>
+    <ApplicationIcon>Assets\wet.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -47,6 +48,7 @@
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="GitHubUpdater.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -54,6 +56,8 @@
     <Resource Include="Assets\hero.jpg" />
     <Resource Include="Assets\parchment.jpg" />
     <Resource Include="Assets\logo.png" />
+    <Resource Include="Assets\icon.png" />
+    <Resource Include="Assets\wet.ico" />
     <Resource Include="Assets\ss1.jpg" />
     <Resource Include="Assets\ss2.jpg" />
     <Resource Include="Assets\ss3.jpg" />
