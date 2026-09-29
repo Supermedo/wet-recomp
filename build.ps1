@@ -14,13 +14,18 @@ if (-not (Test-Path (Join-Path $sdkDir "CMakeLists.txt"))) {
     exit 2
 }
 
+$llvmBin = "C:\Program Files\LLVM\bin"
+if (Test-Path (Join-Path $llvmBin "clang.exe")) {
+    $env:PATH = "$llvmBin;$env:PATH"
+}
+
 if (-not (Get-Command cmake -ErrorAction SilentlyContinue)) { throw "cmake not found" }
 if (-not (Get-Command clang -ErrorAction SilentlyContinue) -and
     -not (Get-Command clang++ -ErrorAction SilentlyContinue)) {
     throw "clang not found"
 }
 
-cmake --preset win-amd64-release "-DREXSDK_DIR=$sdkDir"
+cmake --preset win-amd64-release "-DREXSDK_DIR=$sdkDir" "-DCMAKE_BUILD_TYPE=Release"
 if ($LASTEXITCODE -ne 0) { throw "cmake configure failed" }
 
 $buildDir = Join-Path $root "out\build\win-amd64-release"

@@ -9,6 +9,11 @@ if (-not (Test-Path $xex)) {
     exit 2
 }
 
+$llvmBin = "C:\Program Files\LLVM\bin"
+if (Test-Path (Join-Path $llvmBin "clang.exe")) {
+    $env:PATH = "$llvmBin;$env:PATH"
+}
+
 foreach ($tool in @("git", "cmake")) {
     if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
         Write-Host "Missing $tool on PATH."
@@ -48,6 +53,20 @@ if (-not $cli) { throw "rexglue.exe not found" }
 
 & $cli init --force --project-name wet --project-root $root --xex-path $xex --game-root (Join-Path $root "game")
 if ($LASTEXITCODE -ne 0) { throw "rexglue init failed" }
+
+$extraPath = Join-Path $root "patches\extra-functions.toml"
+$manifestPath = Join-Path $root "wet_manifest.toml"
+if (Test-Path $extraPath) {
+    $manifest = Get-Content -Raw $manifestPath
+    $extra = Get-Content -Raw $extraPath
+    foreach ($m in [regex]::Matches($extra, '(?ms)^\[entrypoint\.functions\.(0x[0-9A-Fa-f]+)\](?:\r?\n(?!\[).*)*')) {
+        $addr = $m.Groups[1].Value
+        if ($manifest -notmatch [regex]::Escape("[entrypoint.functions.$addr]")) {
+            Add-Content -Path $manifestPath -Value "`n$($m.Value.TrimEnd())`n"
+            Write-Host "Added guest function $addr to manifest"
+        }
+    }
+}
 
 cmake --build $buildDir --target wet_codegen
 if ($LASTEXITCODE -ne 0) { throw "codegen failed" }

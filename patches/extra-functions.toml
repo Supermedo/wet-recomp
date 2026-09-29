@@ -1,0 +1,5 @@
+# Missed by auto-discovery (16-byte gap between sub_828D6B58 and sub_828D6C48).
+# Sets a reload flag and tail-calls the checkpoint restore path. Without this,
+# Load Last Checkpoint does nothing and death black-screens in a retry loop.
+[entrypoint.functions.0x828D6C38]
+name = "sub_828D6C38"

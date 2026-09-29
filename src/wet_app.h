@@ -107,7 +107,7 @@ class WetApp : public rex::ReXApp {
     auto* dispatcher = runtime()->function_dispatcher();
     if (!dispatcher) return;
     constexpr uint32_t kMissing[] = {
-        0x83347B48, 0x83356DB8, 0x82A234A0, 0x828D44E0, 0x828D6C38,
+        0x83347B48, 0x83356DB8, 0x82A234A0, 0x828D44E0,
     };
     for (uint32_t addr : kMissing) {
       if (dispatcher->GetFunction(addr)) continue;
