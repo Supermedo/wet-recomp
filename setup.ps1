@@ -24,12 +24,12 @@ if (-not (Test-Path (Join-Path $sdkDir ".git"))) {
 git -C $sdkDir submodule update --init --recursive --depth 1
 if ($LASTEXITCODE -ne 0) { throw "submodule init failed" }
 
-$patch = Join-Path $root "patches\rexglue-input.patch"
-if (Test-Path $patch) {
-    git -C $sdkDir apply --check --ignore-whitespace $patch 2>$null
+$patchDir = Join-Path $root "patches"
+Get-ChildItem -Path $patchDir -Filter "*.patch" | Sort-Object Name | ForEach-Object {
+    git -C $sdkDir apply --check --ignore-whitespace $_.FullName 2>$null
     if ($LASTEXITCODE -eq 0) {
-        git -C $sdkDir apply --ignore-whitespace $patch
-        if ($LASTEXITCODE -ne 0) { throw "failed to apply patches\rexglue-input.patch" }
+        git -C $sdkDir apply --ignore-whitespace $_.FullName
+        if ($LASTEXITCODE -ne 0) { throw "failed to apply $($_.Name)" }
     }
 }
 

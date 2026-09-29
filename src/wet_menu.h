@@ -33,7 +33,7 @@ class WetSettingsMenu : public rex::ui::ImGuiDialog {
     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.85f, 0.95f, 0.98f, 1.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
 
-    ImGui::SetNextWindowSize(ImVec2(560, 660), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(560, 700), ImGuiCond_Always);
     bool visible = true;
     if (ImGui::Begin("##wet_settings", &visible,
                      ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
@@ -84,7 +84,12 @@ class WetSettingsMenu : public rex::ui::ImGuiDialog {
  private:
   void DrawDisplay() {
     ImGui::Combo("Resolution", &resolution_,
-                 "Auto (match monitor)\01080p\02K (1440p)\04K\0");
+                 "Auto (match monitor)\01080p\02K (1440p)\0"
+                 "Ultrawide 2560x1080\0Ultrawide 3440x1440\04K\0");
+    ImGui::Combo("Language", &language_,
+                 "English\0Japanese\0German\0French\0Spanish\0Italian\0"
+                 "Korean\0Chinese (Trad.)\0Portuguese\0Chinese (Simp.)\0"
+                 "Polish\0Russian\0");
     ImGui::Combo("Frame pace", &fps_mode_,
                  "Match Display\060 Hz\0120 Hz\0144 Hz\0Unlocked\0");
     ImGui::Checkbox("VSync", &vsync_);
@@ -93,7 +98,7 @@ class WetSettingsMenu : public rex::ui::ImGuiDialog {
     ImGui::Checkbox("FPS overlay", &fps_overlay_);
     ImGui::Text("Display: %.0f Hz", wet::DetectDisplayRefreshHz());
     ImGui::TextWrapped(
-        "1080p / 2K / 4K set guest output and internal scale. Apply, then restart.");
+        "Ultrawide fills 21:9. Language and resolution apply after restart.");
   }
 
   void DrawGraphics() {
@@ -101,6 +106,7 @@ class WetSettingsMenu : public rex::ui::ImGuiDialog {
                      "Performance\0Balanced\0Quality\0Ultra\0")) {
       FillPreset(preset_);
     }
+    ImGui::Combo("Renderer", &gpu_backend_, "Auto\0Direct3D 12\0Vulkan\0");
     ImGui::Combo("Render scale", &scale_, "Native (1x)\0High (2x)\0Ultra (3x)\0");
     ImGui::Combo("Anti-aliasing", &aa_, "Off\0FXAA\0FXAA Extreme\0");
     ImGui::Combo("Filtering", &aniso_, "Default\04x\08x\016x\0");
@@ -150,13 +156,17 @@ class WetSettingsMenu : public rex::ui::ImGuiDialog {
   }
 
   void ApplyResolution() {
-    const char* presets[] = {"", "1080p", "1440p", "4k"};
-    const char* widths[] = {"0", "1920", "2560", "3840"};
-    const char* heights[] = {"0", "1080", "1440", "2160"};
+    const char* presets[] = {"", "1080p", "1440p", "2560x1080", "3440x1440", "4k"};
+    const char* widths[] = {"0", "1920", "2560", "2560", "3440", "3840"};
+    const char* heights[] = {"0", "1080", "1440", "1080", "1440", "2160"};
     if (resolution_ <= 0) return;
     rex::cvar::SetFlagByName("resolution", presets[resolution_]);
     rex::cvar::SetFlagByName("window_width", widths[resolution_]);
     rex::cvar::SetFlagByName("window_height", heights[resolution_]);
+    rex::cvar::SetFlagByName("video_mode_width", widths[resolution_]);
+    rex::cvar::SetFlagByName("video_mode_height", heights[resolution_]);
+    const bool ultrawide = resolution_ == 3 || resolution_ == 4;
+    rex::cvar::SetFlagByName("present_letterbox", ultrawide ? "false" : "true");
   }
 
   void ApplyScale() {
@@ -194,6 +204,11 @@ class WetSettingsMenu : public rex::ui::ImGuiDialog {
     char sens[16];
     std::snprintf(sens, sizeof(sens), "%.1f", sensitivity_);
     rex::cvar::SetFlagByName("mnk_sensitivity", sens);
+    const char* gpus[] = {"any", "d3d12", "vulkan"};
+    rex::cvar::SetFlagByName("gpu_backend", gpus[gpu_backend_]);
+    char lang[8];
+    std::snprintf(lang, sizeof(lang), "%d", language_ + 1);
+    rex::cvar::SetFlagByName("user_language", lang);
     ApplyResolution();
     ApplyScale();
     std::snprintf(status_, sizeof(status_),
@@ -206,8 +221,12 @@ class WetSettingsMenu : public rex::ui::ImGuiDialog {
       resolution_ = 1;
     else if (res == "1440p")
       resolution_ = 2;
-    else if (res == "4k" || res == "2160p")
+    else if (res == "2560x1080")
       resolution_ = 3;
+    else if (res == "3440x1440")
+      resolution_ = 4;
+    else if (res == "4k" || res == "2160p")
+      resolution_ = 5;
     else
       resolution_ = 0;
 
@@ -256,6 +275,15 @@ class WetSettingsMenu : public rex::ui::ImGuiDialog {
     sdl_ = SafeQueryString("input_backend", "sdl") != "xinput";
     mnk_ = SafeQueryBool("mnk_mode", true);
     mouse_look_ = SafeQueryBool("mnk_mouse", true);
+    language_ = SafeQueryInt("user_language", 1) - 1;
+    if (language_ < 0 || language_ > 11) language_ = 0;
+    const std::string gpu = SafeQueryString("gpu_backend", "any");
+    if (gpu == "d3d12")
+      gpu_backend_ = 1;
+    else if (gpu == "vulkan")
+      gpu_backend_ = 2;
+    else
+      gpu_backend_ = 0;
     try {
       sensitivity_ = static_cast<float>(rex::cvar::Query<double>("mnk_sensitivity"));
     } catch (...) {
@@ -301,6 +329,8 @@ class WetSettingsMenu : public rex::ui::ImGuiDialog {
   bool sdl_ = true;
   bool mnk_ = true;
   bool mouse_look_ = true;
+  int language_ = 0;
+  int gpu_backend_ = 0;
   float sensitivity_ = 2.0f;
   char status_[192] = {};
 };

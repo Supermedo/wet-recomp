@@ -205,19 +205,22 @@
                                                 <RowDefinition Height="Auto" />
                                                 <RowDefinition Height="Auto" />
                                                 <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
                                             </Grid.RowDefinitions>
                                             <Label Content="Resolution" />
                                             <ComboBox x:Name="ResolutionCombo" Grid.Column="1" Margin="0,4" />
-                                            <Label Content="Frame pace" Grid.Row="1" />
-                                            <ComboBox x:Name="FrameRateCombo" Grid.Row="1" Grid.Column="1" Margin="0,4" />
-                                            <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,10,0,0">
+                                            <Label Content="Language" Grid.Row="1" />
+                                            <ComboBox x:Name="LanguageCombo" Grid.Row="1" Grid.Column="1" Margin="0,4" />
+                                            <Label Content="Frame pace" Grid.Row="2" />
+                                            <ComboBox x:Name="FrameRateCombo" Grid.Row="2" Grid.Column="1" Margin="0,4" />
+                                            <StackPanel Grid.Row="3" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,10,0,0">
                                                 <CheckBox x:Name="FullscreenCheck" Content="Fullscreen" IsChecked="True" Margin="0,0,22,0" />
                                                 <CheckBox x:Name="VSyncCheck" Content="VSync" IsChecked="True" Margin="0,0,22,0" />
                                                 <CheckBox x:Name="FpsOverlayCheck" Content="FPS overlay" />
                                             </StackPanel>
-                                            <TextBlock x:Name="DisplayHintText" Grid.Row="3" Grid.ColumnSpan="2"
+                                            <TextBlock x:Name="DisplayHintText" Grid.Row="4" Grid.ColumnSpan="2"
                                                        Margin="0,10,0,0" Foreground="#B8A090" TextWrapping="Wrap"
-                                                       Text="1080p / 2K / 4K set internal render size. Auto matches your monitor." />
+                                                       Text="Ultrawide 3440x1440 and 2560x1080 fill a 21:9 display. Language applies on PLAY." />
                                         </Grid>
                                     </GroupBox>
 
@@ -234,21 +237,24 @@
                                                 <RowDefinition Height="Auto" />
                                                 <RowDefinition Height="Auto" />
                                                 <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
                                             </Grid.RowDefinitions>
                                             <Label Content="Quality preset" />
                                             <ComboBox x:Name="QualityCombo" Grid.Column="1" Margin="0,4"
                                                       SelectionChanged="QualityCombo_SelectionChanged" />
-                                            <Label Content="Render scale" Grid.Row="1" />
-                                            <ComboBox x:Name="ScaleCombo" Grid.Row="1" Grid.Column="1" Margin="0,4" />
-                                            <Label Content="Anti-aliasing" Grid.Row="2" />
-                                            <ComboBox x:Name="AACombo" Grid.Row="2" Grid.Column="1" Margin="0,4" />
-                                            <Label Content="Texture filtering" Grid.Row="3" />
-                                            <ComboBox x:Name="AnisoCombo" Grid.Row="3" Grid.Column="1" Margin="0,4" />
-                                            <Label Content="Sharpen" Grid.Row="4" />
-                                            <ComboBox x:Name="PostCombo" Grid.Row="4" Grid.Column="1" Margin="0,4" />
-                                            <TextBlock Grid.Row="5" Grid.ColumnSpan="2"
+                                            <Label Content="Renderer" Grid.Row="1" />
+                                            <ComboBox x:Name="GpuBackendCombo" Grid.Row="1" Grid.Column="1" Margin="0,4" />
+                                            <Label Content="Render scale" Grid.Row="2" />
+                                            <ComboBox x:Name="ScaleCombo" Grid.Row="2" Grid.Column="1" Margin="0,4" />
+                                            <Label Content="Anti-aliasing" Grid.Row="3" />
+                                            <ComboBox x:Name="AACombo" Grid.Row="3" Grid.Column="1" Margin="0,4" />
+                                            <Label Content="Texture filtering" Grid.Row="4" />
+                                            <ComboBox x:Name="AnisoCombo" Grid.Row="4" Grid.Column="1" Margin="0,4" />
+                                            <Label Content="Sharpen" Grid.Row="5" />
+                                            <ComboBox x:Name="PostCombo" Grid.Row="5" Grid.Column="1" Margin="0,4" />
+                                            <TextBlock Grid.Row="6" Grid.ColumnSpan="2"
                                                        Margin="0,10,0,0" Foreground="#B8A090" TextWrapping="Wrap"
-                                                       Text="Quality and Ultra render above Xbox 360 resolution. 2x is the usual upgrade. 3x is heavy at 1440p and 4K." />
+                                                       Text="Vulkan is for Linux and Wine. Direct3D 12 is the usual Windows path. 3x scale is heavy at 1440p, ultrawide, and 4K." />
                                         </Grid>
                                     </GroupBox>
 

@@ -1,0 +1,18 @@
+diff --git a/src/system/function_dispatcher.cpp b/src/system/function_dispatcher.cpp
+index bd43109..d597284 100644
+--- a/src/system/function_dispatcher.cpp
++++ b/src/system/function_dispatcher.cpp
+@@ -35,8 +35,11 @@ FunctionDispatcher* GetBoundFunctionDispatcher() {
+ }  // namespace
+ 
+ static void InvalidFunctionTrap(PPCContext& ctx, uint8_t* /*base*/) {
+-  REX_FATAL("Call to invalid or unregistered function at guest address 0x{:08X}",
+-            ctx.last_indirect_target);
++  // WET (and other titles) jump to a few guest addresses that codegen never
++  // emitted, including checkpoint reload / death. Returning is enough for those
++  // paths; killing the process made the game unplayable.
++  REXLOG_ERROR("Unregistered guest call 0x{:08X}; returning", ctx.last_indirect_target);
++  ctx.r3.u64 = 0;
+ }
+ 
+ PPCFunc* ResolveIndirectFunction(uint32_t guest_address) {

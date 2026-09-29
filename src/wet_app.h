@@ -7,6 +7,7 @@
 #include <rex/system/function_dispatcher.h>
 #include <rex/ui/keybinds.h>
 #include <rex/ui/imgui_dialog.h>
+#include <rex/system/gpu_plugin.h>
 #include <rex/logging/macros.h>
 
 #include "display_refresh.h"
@@ -14,13 +15,18 @@
 
 #include <filesystem>
 #include <memory>
+#include <string>
 
 REXCVAR_DEFINE_BOOL(show_fps_overlay, false, "UI",
                     "Show FPS overlay");
 
+REXCVAR_DEFINE_STRING(gpu_backend, "any", "GPU",
+                      "Xenos host backend: any, d3d12, or vulkan");
+
 static void MissingGuestFunctionStub(PPCContext& ctx, uint8_t*) {
   REXLOG_ERROR("Unregistered guest call 0x{:08X}; returning",
                ctx.last_indirect_target);
+  ctx.r3.u64 = 0;
 }
 
 class WetApp : public rex::ReXApp {
@@ -49,6 +55,17 @@ class WetApp : public rex::ReXApp {
 
   void OnPreSetup(rex::RuntimeConfig& config) override {
     config.gpu_plugin = "xenos";
+    std::string backend = "any";
+    try {
+      backend = rex::cvar::Query<std::string>("gpu_backend");
+    } catch (...) {
+    }
+#ifndef _WIN32
+    if (backend.empty() || backend == "any") backend = "vulkan";
+#endif
+    if (!backend.empty() && backend != "any") {
+      config.graphics = rex::system::LoadGpuPlugin("xenos", backend);
+    }
     rex::cvar::SetFlagByName("input_backend", "sdl");
     auto keybind_default = [](const char* name, const char* value) {
       if (rex::cvar::GetFlagSource(name) == rex::cvar::Source::kDefault) {
@@ -89,7 +106,9 @@ class WetApp : public rex::ReXApp {
   void OnPreLaunchModule() override {
     auto* dispatcher = runtime()->function_dispatcher();
     if (!dispatcher) return;
-    constexpr uint32_t kMissing[] = {0x83347B48, 0x83356DB8, 0x82A234A0, 0x828D44E0};
+    constexpr uint32_t kMissing[] = {
+        0x83347B48, 0x83356DB8, 0x82A234A0, 0x828D44E0, 0x828D6C38,
+    };
     for (uint32_t addr : kMissing) {
       if (dispatcher->GetFunction(addr)) continue;
       dispatcher->SetFunction(addr, &MissingGuestFunctionStub);

@@ -178,9 +178,27 @@ namespace Wet.Launcher
                 "Auto (match monitor)",
                 "1080p (1920 x 1080)",
                 "2K (2560 x 1440)",
+                "Ultrawide (2560 x 1080)",
+                "Ultrawide (3440 x 1440)",
                 "4K (3840 x 2160)"
             };
             ResolutionCombo.SelectedIndex = 1;
+
+            LanguageCombo.ItemsSource = new List<string>
+            {
+                "English", "Japanese", "German", "French", "Spanish", "Italian",
+                "Korean", "Chinese (Traditional)", "Portuguese", "Chinese (Simplified)",
+                "Polish", "Russian"
+            };
+            LanguageCombo.SelectedIndex = 0;
+
+            GpuBackendCombo.ItemsSource = new List<string>
+            {
+                "Auto",
+                "Direct3D 12",
+                "Vulkan"
+            };
+            GpuBackendCombo.SelectedIndex = 0;
 
             QualityCombo.ItemsSource = new List<string>
             {
@@ -692,29 +710,58 @@ namespace Wet.Launcher
             if (res == 0) resFlag = DisplayRefresh.AutoResolutionFlag();
             else if (res == 1) resFlag = "1080p";
             else if (res == 2) resFlag = "1440p";
-            else if (res == 3) resFlag = "4k";
+            else if (res == 3) resFlag = "2560x1080";
+            else if (res == 4) resFlag = "3440x1440";
+            else if (res == 5) resFlag = "4k";
             if (resFlag == "1080p")
             {
                 args.Add("--resolution=1080p");
                 args.Add("--window_width=1920");
                 args.Add("--window_height=1080");
+                args.Add("--video_mode_width=1920");
+                args.Add("--video_mode_height=1080");
+                args.Add("--present_letterbox=true");
             }
             else if (resFlag == "1440p")
             {
                 args.Add("--resolution=1440p");
                 args.Add("--window_width=2560");
                 args.Add("--window_height=1440");
+                args.Add("--video_mode_width=2560");
+                args.Add("--video_mode_height=1440");
+                args.Add("--present_letterbox=true");
+            }
+            else if (resFlag == "2560x1080")
+            {
+                args.Add("--resolution=2560x1080");
+                args.Add("--window_width=2560");
+                args.Add("--window_height=1080");
+                args.Add("--video_mode_width=2560");
+                args.Add("--video_mode_height=1080");
+                args.Add("--present_letterbox=false");
+            }
+            else if (resFlag == "3440x1440")
+            {
+                args.Add("--resolution=3440x1440");
+                args.Add("--window_width=3440");
+                args.Add("--window_height=1440");
+                args.Add("--video_mode_width=3440");
+                args.Add("--video_mode_height=1440");
+                args.Add("--present_letterbox=false");
             }
             else if (resFlag == "4k")
             {
                 args.Add("--resolution=4k");
                 args.Add("--window_width=3840");
                 args.Add("--window_height=2160");
+                args.Add("--video_mode_width=3840");
+                args.Add("--video_mode_height=2160");
+                args.Add("--present_letterbox=true");
             }
 
             string[] scales = { "1", "2", "3" };
             int scaleIndex = Math.Max(0, ScaleCombo.SelectedIndex);
-            if ((resFlag == "1440p" || resFlag == "4k") && scaleIndex > 1)
+            if (resFlag != "1080p" && scaleIndex > 1)
                 scaleIndex = 1;
             string scale = scales[Math.Min(scaleIndex, scales.Length - 1)];
             args.Add("--resolution_scale=" + scale);
@@ -751,6 +798,12 @@ namespace Wet.Launcher
                 args.Add("--present_dither=true");
             else
                 args.Add("--present_dither=false");
+
+            string[] gpus = { "any", "d3d12", "vulkan" };
+            int gpuIndex = Math.Max(0, GpuBackendCombo.SelectedIndex);
+            args.Add("--gpu_backend=" + gpus[Math.Min(gpuIndex, gpus.Length - 1)]);
+            int lang = Math.Max(0, LanguageCombo.SelectedIndex);
+            args.Add("--user_language=" + (lang + 1).ToString(CultureInfo.InvariantCulture));
 
             args.Add("--mnk_mode=" + ((MnkCheck.IsChecked ?? true) ? "true" : "false"));
             args.Add("--mnk_mouse=" + ((MouseLookCheck.IsChecked ?? true) ? "true" : "false"));
@@ -874,7 +927,9 @@ namespace Wet.Launcher
         {
             int width, height;
             DetectSize(out width, out height);
-            if (height >= 2000 || width >= 3200) return "4k";
+            if (height >= 2000) return "4k";
+            if (width >= 3300 && height <= 1600) return "3440x1440";
+            if (width >= 2500 && height <= 1200) return "2560x1080";
             if (height >= 1300 || width >= 2400) return "1440p";
             return "1080p";
         }
