@@ -220,7 +220,7 @@
                                             </StackPanel>
                                             <TextBlock x:Name="DisplayHintText" Grid.Row="4" Grid.ColumnSpan="2"
                                                        Margin="0,10,0,0" Foreground="#B8A090" TextWrapping="Wrap"
-                                                       Text="Ultrawide 3440x1440 and 2560x1080 fill a 21:9 display. Language applies on PLAY." />
+                                                       Text="Ultrawide 2560x1080 and 3440x1440 render extra horizontal view at 21:9, not a stretched 16:9 image. Language applies on PLAY." />
                                         </Grid>
                                     </GroupBox>
 

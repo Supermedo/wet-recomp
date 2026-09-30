@@ -135,29 +135,38 @@ namespace Wet.Launcher
         public static void ApplyAndRestart(string installDir, string payloadDir)
         {
             string script = Path.Combine(Path.GetTempPath(), "wet-recomp-apply.cmd");
+            string target = Path.GetFullPath(installDir).TrimEnd(Path.DirectorySeparatorChar);
+            string source = Path.GetFullPath(payloadDir).TrimEnd(Path.DirectorySeparatorChar);
+            int pid = Process.GetCurrentProcess().Id;
+
             var sb = new StringBuilder();
             sb.AppendLine("@echo off");
-            sb.AppendLine("set TARGET=%~1");
-            sb.AppendLine("set SOURCE=%~2");
-            sb.AppendLine("set WAITPID=%~3");
+            sb.AppendLine("setlocal EnableExtensions");
+            sb.AppendLine("set WAITPID=" + pid.ToString(CultureInfo.InvariantCulture));
+            sb.AppendLine("set \"TARGET=" + target + "\"");
+            sb.AppendLine("set \"SOURCE=" + source + "\"");
             sb.AppendLine(":waitloop");
             sb.AppendLine("ping -n 2 127.0.0.1 >nul");
-            sb.AppendLine("tasklist /FI \"PID eq %WAITPID%\" | findstr /I \"%WAITPID%\" >nul");
+            sb.AppendLine("tasklist /FI \"PID eq %WAITPID%\" | findstr /I /C:\"%WAITPID%\" >nul");
             sb.AppendLine("if not errorlevel 1 goto waitloop");
-            sb.AppendLine("for /d %%D in (\"%SOURCE%\\*\") do (");
-            sb.AppendLine("  if /I not \"%%~nxD\"==\"game\" xcopy /E /Y /I \"%%D\" \"%TARGET%\\%%~nxD\\\" >nul");
+            sb.AppendLine("ping -n 2 127.0.0.1 >nul");
+            sb.AppendLine("if not exist \"%SOURCE%\\WetLauncher.exe\" if not exist \"%SOURCE%\\wet.exe\" goto launch");
+            sb.AppendLine("robocopy \"%SOURCE%\" \"%TARGET%\" /E /IS /IT /R:8 /W:1 /XD game /NFL /NDL /NJH /NJS /nc /ns /np");
+            sb.AppendLine("if %ERRORLEVEL% GEQ 8 (");
+            sb.AppendLine("  for /f \"delims=\" %%F in ('dir /b /a-d \"%SOURCE%\" 2^>nul') do copy /Y \"%SOURCE%\\%%F\" \"%TARGET%\\\" >nul");
+            sb.AppendLine("  for /f \"delims=\" %%D in ('dir /b /ad \"%SOURCE%\" 2^>nul') do (");
+            sb.AppendLine("    if /I not \"%%D\"==\"game\" xcopy /E /Y /I \"%SOURCE%\\%%D\" \"%TARGET%\\%%D\\\" >nul");
+            sb.AppendLine("  )");
             sb.AppendLine(")");
-            sb.AppendLine("for %%F in (\"%SOURCE%\\*.*\") do copy /Y \"%%F\" \"%TARGET%\\\" >nul");
+            sb.AppendLine(":launch");
             sb.AppendLine("start \"\" \"%TARGET%\\WetLauncher.exe\"");
-            sb.AppendLine("rmdir /S /Q \"%SOURCE%\"");
-            sb.AppendLine("del /Q \"%~f0\"");
+            sb.AppendLine("rmdir /S /Q \"%SOURCE%\" 2>nul");
+            sb.AppendLine("del \"%~f0\" 2>nul");
             File.WriteAllText(script, sb.ToString(), Encoding.ASCII);
 
             Process.Start(new ProcessStartInfo
             {
-                FileName = "cmd.exe",
-                Arguments = "/c start \"\" /min \"" + script + "\" \"" + installDir + "\" \"" +
-                            payloadDir + "\" " + Process.GetCurrentProcess().Id,
+                FileName = script,
                 UseShellExecute = true,
                 WindowStyle = ProcessWindowStyle.Hidden,
             });

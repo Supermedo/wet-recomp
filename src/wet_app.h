@@ -12,6 +12,7 @@
 
 #include "display_refresh.h"
 #include "wet_menu.h"
+#include "wet_ultrawide.h"
 
 #include <filesystem>
 #include <memory>
@@ -114,6 +115,7 @@ class WetApp : public rex::ReXApp {
       dispatcher->SetFunction(addr, &MissingGuestFunctionStub);
       REXLOG_WARN("Registered stub for missing guest function 0x{:08X}", addr);
     }
+    wet::InstallUltrawideBackbuffer(dispatcher);
   }
 
   void OnPostSetup() override {

@@ -98,7 +98,7 @@ class WetSettingsMenu : public rex::ui::ImGuiDialog {
     ImGui::Checkbox("FPS overlay", &fps_overlay_);
     ImGui::Text("Display: %.0f Hz", wet::DetectDisplayRefreshHz());
     ImGui::TextWrapped(
-        "Ultrawide fills 21:9. Language and resolution apply after restart.");
+        "Ultrawide renders extra horizontal view at 21:9. Restart to apply.");
   }
 
   void DrawGraphics() {
