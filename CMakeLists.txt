@@ -15,7 +15,7 @@ endif()
 
 include(generated/rexglue.cmake)
 
-set(WET_SOURCES src/main.cpp)
+set(WET_SOURCES src/main.cpp src/wet_ultrawide.cpp)
 
 if(WIN32)
     enable_language(RC)

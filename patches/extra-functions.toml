@@ -3,3 +3,20 @@
 # Load Last Checkpoint does nothing and death black-screens in a retry loop.
 [entrypoint.functions.0x828D6C38]
 name = "sub_828D6C38"
+
+# 8-byte thunk immediately before sub_828D44E8. The stub returned r3=0, then
+# the movie-theater cutscene (Akers / Chinese pagoda) dereferenced NULL.
+[entrypoint.functions.0x828D44E0]
+name = "sub_828D44E0"
+
+# 16-byte hole between sub_83356DA8 and sub_83356DC8.
+[entrypoint.functions.0x83356DB8]
+name = "sub_83356DB8"
+
+# Gap before sub_82A234B8.
+[entrypoint.functions.0x82A234A0]
+name = "sub_82A234A0"
+
+# Gap before sub_83347BB0.
+[entrypoint.functions.0x83347B48]
+name = "sub_83347B48"

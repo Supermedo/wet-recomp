@@ -115,7 +115,7 @@ class WetApp : public rex::ReXApp {
       dispatcher->SetFunction(addr, &MissingGuestFunctionStub);
       REXLOG_WARN("Registered stub for missing guest function 0x{:08X}", addr);
     }
-    wet::InstallUltrawideBackbuffer(dispatcher);
+    wet::RetainUltrawideHooks();
   }
 
   void OnPostSetup() override {

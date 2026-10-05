@@ -9,9 +9,17 @@ if (-not (Test-Path $xex)) {
     exit 2
 }
 
-$llvmBin = "C:\Program Files\LLVM\bin"
-if (Test-Path (Join-Path $llvmBin "clang.exe")) {
-    $env:PATH = "$llvmBin;$env:PATH"
+foreach ($llvmBin in @(
+    (Join-Path $env:USERPROFILE "llvm-23\LLVM\bin"),
+    "C:\Program Files\LLVM\bin"
+)) {
+    $clang = Join-Path $llvmBin "clang.exe"
+    if (-not (Test-Path $clang)) { continue }
+    $verLine = & $clang --version 2>$null | Select-Object -First 1
+    if ($verLine -match "clang version (\d+)" -and [int]$Matches[1] -ge 20) {
+        $env:PATH = "$llvmBin;$env:PATH"
+        break
+    }
 }
 
 foreach ($tool in @("git", "cmake")) {
@@ -59,12 +67,26 @@ $manifestPath = Join-Path $root "wet_manifest.toml"
 if (Test-Path $extraPath) {
     $manifest = Get-Content -Raw $manifestPath
     $extra = Get-Content -Raw $extraPath
-    foreach ($m in [regex]::Matches($extra, '(?ms)^\[entrypoint\.functions\.(0x[0-9A-Fa-f]+)\](?:\r?\n(?!\[).*)*')) {
+    $changed = $false
+    foreach ($m in [regex]::Matches($extra, '(?m)^\[entrypoint\.functions\.(0x[0-9A-Fa-f]+)\]\s*\r?\nname\s*=\s*"([^"]+)"')) {
         $addr = $m.Groups[1].Value
-        if ($manifest -notmatch [regex]::Escape("[entrypoint.functions.$addr]")) {
-            Add-Content -Path $manifestPath -Value "`n$($m.Value.TrimEnd())`n"
+        $name = $m.Groups[2].Value
+        $header = "[entrypoint.functions.$addr]"
+        if ($manifest -notmatch [regex]::Escape($header)) {
+            $manifest += "`n$header`nname = `"$name`"`n"
+            $changed = $true
             Write-Host "Added guest function $addr to manifest"
+        } elseif ($manifest -match "(?s)$([regex]::Escape($header))\s*\r?\nname\s*=\s*`"unresolved_target_[^`"]+`"") {
+            $manifest = [regex]::Replace(
+                $manifest,
+                "(?m)($([regex]::Escape($header))\s*\r?\nname\s*=\s*)`"unresolved_target_[^`"]+`"",
+                "`${1}`"$name`"")
+            $changed = $true
+            Write-Host "Promoted $addr from unresolved stub to $name"
         }
+    }
+    if ($changed) {
+        Set-Content -Path $manifestPath -Value $manifest -NoNewline
     }
 }
 

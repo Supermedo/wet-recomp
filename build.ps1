@@ -14,9 +14,17 @@ if (-not (Test-Path (Join-Path $sdkDir "CMakeLists.txt"))) {
     exit 2
 }
 
-$llvmBin = "C:\Program Files\LLVM\bin"
-if (Test-Path (Join-Path $llvmBin "clang.exe")) {
-    $env:PATH = "$llvmBin;$env:PATH"
+foreach ($llvmBin in @(
+    (Join-Path $env:USERPROFILE "llvm-23\LLVM\bin"),
+    "C:\Program Files\LLVM\bin"
+)) {
+    $clang = Join-Path $llvmBin "clang.exe"
+    if (-not (Test-Path $clang)) { continue }
+    $verLine = & $clang --version 2>$null | Select-Object -First 1
+    if ($verLine -match "clang version (\d+)" -and [int]$Matches[1] -ge 20) {
+        $env:PATH = "$llvmBin;$env:PATH"
+        break
+    }
 }
 
 if (-not (Get-Command cmake -ErrorAction SilentlyContinue)) { throw "cmake not found" }

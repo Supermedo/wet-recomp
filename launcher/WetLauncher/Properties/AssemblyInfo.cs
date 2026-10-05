@@ -7,6 +7,6 @@ using System.Windows;
 [assembly: AssemblyProduct("WET")]
 [assembly: AssemblyCopyright("Copyright © 2026")]
 [assembly: ComVisible(false)]
-[assembly: AssemblyVersion("0.5.0.0")]
-[assembly: AssemblyFileVersion("0.5.0.0")]
+[assembly: AssemblyVersion("0.6.0.0")]
+[assembly: AssemblyFileVersion("0.6.0.0")]
 [assembly: ThemeInfo(ResourceDictionaryLocation.None, ResourceDictionaryLocation.SourceAssembly)]
