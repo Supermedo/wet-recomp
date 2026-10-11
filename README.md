@@ -2,7 +2,7 @@
 
 Unofficial PC port of *WET* (2009) by Mohammed Albarghouthi, built with [ReXGlue](https://github.com/rexglue/rexglue-sdk). This repo does not include the game. You need an ISO dumped from a disc you own.
 
-Support the project: https://buymeacoffee.com/mohmmadpodt
+
 
 ## Requirements
 
