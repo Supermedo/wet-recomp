@@ -1,5 +1,5 @@
 # WET (Xbox 360)
-
+<a href="https://trendshift.io/repositories/252882?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-252882" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/252882/daily?language=C%23" alt="Supermedo%2Fwet-recomp | Trendshift" width="250" height="55"/></a>
 Unofficial PC port of *WET* (2009) by Mohammed Albarghouthi, built with [ReXGlue](https://github.com/rexglue/rexglue-sdk). This repo does not include the game. You need an ISO dumped from a disc you own.
 
 
